@@ -52,30 +52,32 @@ export class AccordionPanel extends Base<AccordionPanelProperties> {
 }
 
 export class Accordion extends WidgetBase<AccordionProperties> {
-  private _activeId: string | string[];
+  private _activeIds: string[] = [];
 
   private _onAccordionPanelChanged(id: string, e: any): void {
-    console.log('changed', id, e)
-    if (!this.properties.exclusive) {
-      (<string[]>this._activeId).push(id)
-    } else {
-      this._activeId = id;
+    console.log('changed', id, e, e.target.checked)
+    const { exclusive } = this.properties;
+    if (exclusive) { this._activeIds = [] }
+    if (e.target.checked) {
+      this._activeIds.push(id)
+    } else if (!exclusive) {
+      const pos = this._activeIds.indexOf(id);
+      pos > -1 && this._activeIds.splice(pos, 1);
     }
     this.invalidate();
   }
   private _onAccordionPanelsClosed() {
-    this._activeId = '';
+    this._activeIds = [];
     this.invalidate();
   }
   protected render(): DNode {
     const { exclusive, panels = [] } = this.properties;
-    if (!exclusive) { this._activeId = []; }
     const children: DNode[] = panels.map((o: any) => {
       const id = o.title;
       return w(AccordionPanel, {
         id, exclusive,
         key: id,
-        active: (!exclusive) ? (this._activeId.indexOf(id) > -1) : id === this._activeId,
+        active: (this._activeIds.indexOf(id) > -1),
         onChange: this._onAccordionPanelChanged
       });
     });
@@ -96,9 +98,9 @@ export class App extends WidgetBase<WidgetProperties> {
 
   protected render(): DNode {
     return w(Accordion, {
-    	exclusive: true,
-      //icon: true,
-      //styled: true,
+    	exclusive: false,
+    //				icon: true,
+    //				styled: true,
     	onChange: (id: string, e: Event) => { console.log(id, e) },
     	panels: [
     		{title: 'title', meta: 'meta', content: 'Lorem Ipsum', active: true},
@@ -106,5 +108,4 @@ export class App extends WidgetBase<WidgetProperties> {
     	]
     });
   }
-  
 }
