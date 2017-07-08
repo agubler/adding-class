@@ -38,7 +38,7 @@ export class AccordionPanel extends Base<AccordionPanelProperties> {
     get id() { return this.properties.id }
 
     private _onChange(event: MouseEvent) {
-      this.properties.onChange(mixin({}, event, {widget: this}))
+      this.properties.onChange(mixin(event, {widget: this}))
     }
     protected render(): DNode {
         const { id, active, exclusive } = this.properties;
@@ -52,6 +52,10 @@ export class AccordionPanel extends Base<AccordionPanelProperties> {
           w(AccordionTitle, {active}, [id])
         ]);
     }
+
+    activate() {
+      console.log('a')
+    }
 }
 
 export class Accordion extends WidgetBase<AccordionProperties> {
@@ -61,26 +65,22 @@ export class Accordion extends WidgetBase<AccordionProperties> {
   static Title = AccordionTitle;
   //static Meta = AccordionMeta;
 
-   _activeIds: string[] = [];
+   _activeIds: any = {};
 
   private _onAccordionPanelChanged(e: any): void {
     console.log('changed', e, e.target.checked, e.widget.id)
-    const { exclusive } = this.properties;
-    if (exclusive) { this._activeIds = [] }
-    if (e.target.checked && this._activeIds.indexOf(e.widget.id) < 0) {
-      this._activeIds.push(e.widget.id)
-    } else if (!e.target.checked && !exclusive) {
+    if (this.properties.exclusive) { this._activeIds = {} }
+    if (e.target.checked) {
+      this._activeIds[e.widget.id] = true;
+    } else if (!e.target.checked) {
       console.log('before remove', this._activeIds)
-      const pos = this._activeIds.indexOf(e.widget.id);
-      if (pos > -1) {
-        this._activeIds.splice(pos, 1);
-      }
+      this._activeIds[e.widget.id] = false;
     }
     this.invalidate();
-    if (!e.target.checked && !exclusive) {console.log('remove', this._activeIds);}
+    if (!e.target.checked) {console.log('remove', this._activeIds);}
   }
   private _onAccordionPanelsClosed() {
-    this._activeIds = [];
+    this._activeIds = {};
     this.invalidate();
   }
 
@@ -90,16 +90,13 @@ export class Accordion extends WidgetBase<AccordionProperties> {
     let children: DNode[] = panels.map((o: any) => {
       const id = o.title;
 
-/*  // TODO FIXME - HOW CAN I SET THE INITIAL STATE FOR AN ACTIVE PANEL ???
-      if (o.active && this._activeIds.indexOf(id) < 0) {
-        if (exclusive) { this._activeIds = [] }
-        this._activeIds.push(id);
-      }
-*/
+  // TODO FIXME - HOW CAN I SET THE INITIAL STATE FOR AN ACTIVE PANEL ???
+  //    if (o.active) { this._activeIds[id] = true; }
+
       return w(AccordionPanel, {
         id, exclusive,
         key: id,
-        active: (this._activeIds.indexOf(id) > -1),
+        active: this._activeIds[id],
         onChange: this._onAccordionPanelChanged
       });
     });
