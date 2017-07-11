@@ -8,14 +8,14 @@ import * as css from './styles/app.m.css';
 
 export interface AccordionTitleProperties { active: boolean; }
 export interface AccordionPanelProperties {
-  id: string;
-  active: boolean;
-  exclusive: boolean;
+	id: string;
+	active: boolean;
+	exclusive: boolean;
 	onChange: (evt: any) => void;
 }
 export interface AccordionProperties {
-  panels: any;
-  exclusive: boolean;
+	panels: any;
+	exclusive: boolean;
 	onChange: (evt: any) => void;
 }
 
@@ -23,121 +23,131 @@ const Base = ThemeableMixin(WidgetBase);
 
 @theme(css)
 export class AccordionTitle extends Base<AccordionTitleProperties> {
-  protected render(): DNode {
-    const { active } = this.properties;
-    return v('span', [
-      v('label', {for: 'close_g_id'}),
-      v('h5', {
-        classes: this.classes(css.button, active ? css.active : null)
-      }, this.children)
-    ])
-  }
+	protected render(): DNode {
+		const { active } = this.properties;
+		return v('span', [
+			v('label', {for: 'close_g_id'}),
+			v('h5', {
+				classes: this.classes(css.button, active ? css.active : null)
+			}, this.children)
+		]);
+	}
 }
 
 export class AccordionPanel extends Base<AccordionPanelProperties> {
-    get id() { return this.properties.id }
+	get id() { return this.properties.id }
 
-    private _onChange(event: MouseEvent) {
-      this.properties.onChange(mixin(event, {widget: this}))
-    }
-    protected render(): DNode {
-        const { id, active, exclusive } = this.properties;
-        return v('label', [
-          v('input', {
-            checked: active,
-            type: !!exclusive ? 'radio' : 'checkbox',
-            name: '_g_id',
-            onchange: this._onChange
-          }),
-          w(AccordionTitle, {active}, [id])
-        ]);
-    }
+	private _onChange(event: MouseEvent) {
+		this.properties.onChange(mixin(event, {widget: this}))
+	}
+	protected render(): DNode {
+		const { id, active, exclusive } = this.properties;
+		return v('label', [
+			v('input', {
+				checked: active,
+				type: !!exclusive ? 'radio' : 'checkbox',
+				name: '_g_id',
+				onchange: this._onChange
+			}),
+			w(AccordionTitle, {active}, [id])
+		]);
+	}
 
-    activate() {
-      console.log('a')
-    }
+	activate() {
+		console.log('a')
+	}
 }
 
 export class Accordion extends WidgetBase<AccordionProperties> {
 
-  static Panel = AccordionPanel;
-  //static Content = AccordionContent;
-  static Title = AccordionTitle;
-  //static Meta = AccordionMeta;
+	static Panel = AccordionPanel;
+	//static Content = AccordionContent;
+	static Title = AccordionTitle;
+	//static Meta = AccordionMeta;
 
-   _activeIds: any = {};
+	_activeIds: any = {};
 
-  private _onAccordionPanelChanged(e: any): void {
-    console.log('changed', e, e.target.checked, e.widget.id)
-    if (this.properties.exclusive) { this._activeIds = {} }
-    if (e.target.checked) {
-      this._activeIds[e.widget.id] = true;
-    } else if (!e.target.checked) {
-      console.log('before remove', this._activeIds)
-      this._activeIds[e.widget.id] = false;
-    }
-    this.invalidate();
-    if (!e.target.checked) {console.log('remove', this._activeIds);}
-  }
-  private _onAccordionPanelsClosed() {
-    this._activeIds = {};
-    this.invalidate();
-  }
+	private _initialized = false;
 
-  render(): DNode {
-    const { exclusive, panels = [] } = this.properties;
+	private _onAccordionPanelChanged(e: any): void {
+		console.log('changed', e, e.target.checked, e.widget.id)
+		if (this.properties.exclusive) { this._activeIds = {} }
+		if (e.target.checked) {
+			this._activeIds[e.widget.id] = true;
+		} else if (!e.target.checked) {
+			console.log('before remove', this._activeIds);
+			this._activeIds[e.widget.id] = false;
+		}
+		this.invalidate();
+		if (!e.target.checked) {console.log('remove', this._activeIds);}
+	}
+	private _onAccordionPanelsClosed() {
+		this._activeIds = {};
+		this.invalidate();
+	}
 
-    let children: DNode[] = panels.map((o: any) => {
-      const id = o.title;
+	render(): DNode {
+		const { exclusive, panels = [] } = this.properties;
 
-  // TODO FIXME - HOW CAN I SET THE INITIAL STATE FOR AN ACTIVE PANEL ???
-  //    if (o.active) { this._activeIds[id] = true; }
+		let children: DNode[] = panels.map((o: any) => {
+			const id = o.title;
 
-      return w(AccordionPanel, {
-        id, exclusive,
-        key: id,
-        active: this._activeIds[id],
-        onChange: this._onAccordionPanelChanged
-      });
-    });
+			if (!this._initialized && o.defaultActive) {
+				this._activeIds[id] = true;
+				if (exclusive) {
+					this._initialized = true;
+				}
+			}
 
-    if (!!exclusive) {
-      children.push( v('input', {
-        type: 'radio',
-        name:'_g_id',
-        id:'close_g_id',
-        onchange: this._onAccordionPanelsClosed
-      }) )
-    }
-    return v('fieldset', children);
-  }
+			return w(AccordionPanel, {
+				id, exclusive,
+				key: id,
+				active: this._activeIds[id],
+				onChange: this._onAccordionPanelChanged
+			});
+		});
+
+		this._initialized = true;
+
+		if (!!exclusive) {
+			children.push( v('input', {
+				type: 'radio',
+				name:'_g_id',
+				id:'close_g_id',
+				onchange: this._onAccordionPanelsClosed
+			}) )
+		}
+		return v('fieldset', children);
+	}
 }
 
 
 export class App extends WidgetBase<WidgetProperties> {
 
-  protected render(): DNode[] {
-    return [
-      v('span',['Accordion logic for "exclusive: false"']),
-      w(Accordion, {
-      	exclusive: false, /* icon: true, styled: true, etc. */
-      	onChange: (evt: Event) => { console.log(evt) },
-      	panels: [
-      		{title: 'title', meta: 'meta', content: 'Lorem Ipsum', active: true},
-      		{title: 'title2', meta: 'meta2', content: 'Lorem Ipsum dolor sunt'}
-      	]
-      }),
+	protected render(): DNode[] {
+		return [
+			v('span',['Accordion logic for "exclusive: false"']),
+			w(Accordion, {
+				exclusive: false, /* icon: true, styled: true, etc. */
+				onChange: (evt: Event) => { console.log(evt) },
+				panels: [
+					{title: 'title', meta: 'meta', content: 'Lorem Ipsum', defaultActive: true},
+					{title: 'title2', meta: 'meta2', content: 'Lorem Ipsum dolor sunt'},
+					{title: 'title3', meta: 'meta3', content: 'Lorem', defaultActive: true}
+				]
+			}),
 
-      v('span',['Accordion logic for "exclusive: true" (last radio = close all stub)']),
-      w(Accordion, {
-      	exclusive: true,
-      	onChange: (evt: Event) => { console.log(evt) },
-      	panels: [
-      		{title: 'title', meta: 'meta', content: 'Lorem Ipsum', active: true},
-      		{title: 'title2', meta: 'meta2', content: 'Lorem Ipsum dolor sunt'}
-      	]
-      })
+			v('span',['Accordion logic for "exclusive: true" (last radio = close all stub)']),
+			w(Accordion, {
+				exclusive: true,
+				onChange: (evt: Event) => { console.log(evt) },
+				panels: [
+					{title: 'title', meta: 'meta', content: 'Lorem Ipsum', defaultActive: true},
+					{title: 'title2', meta: 'meta2', content: 'Lorem Ipsum dolor sunt'},
+					{title: 'title3', meta: 'meta3', content: 'Lorem', defaultActive: true} // will be ignored as exclusive and uses the first default active
+				]
+			})
 
-    ];
-  }
+		];
+	}
 }
